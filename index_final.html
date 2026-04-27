@@ -61,8 +61,11 @@
             text-align: center;
             box-shadow: 0 0 40px rgba(0,204,255,.08);
         }
-        .auth-logo {
-            margin: 0 auto 16px;
+        .auth-logo-img {
+            max-width: 150px;
+            margin: 0 auto 20px;
+            display: block;
+            filter: drop-shadow(0 0 10px var(--glow));
         }
         .auth-title {
             font-size: 16px;
@@ -116,9 +119,10 @@
         .auth-error {
             font-family: 'Space Mono', monospace;
             font-size: 10px;
-            color: var(--red);
+            color: var(--muted); /* Мягкий цвет для сообщений */
             margin-top: 10px;
             min-height: 16px;
+            letter-spacing: 0.5px;
         }
         .auth-toggle {
             font-family: 'Space Mono', monospace;
@@ -183,7 +187,7 @@
             background: var(--bg2);
             border: 1px solid var(--border);
             border-radius: 16px;
-            padding: 18px 16px;
+            padding: 18px 166px;
             margin: 10px 15px;
         }
         .status-top {
@@ -425,22 +429,14 @@
 </head>
 <body>
 
-<!-- OFFLINE INDICATOR -->
 <div id="offline-indicator">⚠ OFFLINE — ДАННЫЕ СОХРАНЕНЫ ЛОКАЛЬНО</div>
 
-<!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<!-- AUTH OVERLAY -->
 <div id="auth-overlay">
     <div class="auth-card">
-        <div class="auth-logo">
-            <svg viewBox="0 0 100 100" width="60" height="60" fill="var(--accent)" style="filter:drop-shadow(0 0 8px var(--glow))">
-                <path d="M50 5 L95 95 L50 75 L5 95 Z" fill="none" stroke="currentColor" stroke-width="4"/>
-                <path d="M50 25 L75 80 L50 65 L25 80 Z" fill="currentColor"/>
-                <text x="50" y="55" font-family="Syne" font-size="11" font-weight="900" text-anchor="middle" fill="black">AE</text>
-            </svg>
-        </div>
+        <img src="https://i.ibb.co/VYvXf7V/assassin-energy-logo.png" alt="Assassin Energy Logo" class="auth-logo-img">
+
         <div class="auth-title" id="auth-title">AE_SYSTEM.INIT</div>
         <div class="auth-sub" id="auth-sub">ELITE ORDER · AUTH PROTOCOL</div>
         <input class="auth-input" id="user-in" placeholder="IDENTIFIER" autocomplete="off" onkeydown="if(event.key==='Enter')handleAuth()">
@@ -451,7 +447,6 @@
     </div>
 </div>
 
-<!-- HEADER -->
 <header class="ae-header">
     <div class="ae-header-logo">
         <svg class="ae-logo-svg" viewBox="0 0 100 100">
@@ -466,7 +461,6 @@
     </div>
 </header>
 
-<!-- MINTED BAR -->
 <div class="minted-bar">
     <span>MINTED</span>
     <div class="minted-bar-fill-wrap">
@@ -475,7 +469,6 @@
     <span><span id="minted-total">0</span> / 50M $AE</span>
 </div>
 
-<!-- STATUS CARD -->
 <div class="card">
     <div class="status-top">
         <span id="lvl-display" style="color:var(--accent); font-family:'Space Mono',monospace; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">RANK 1</span>
@@ -489,7 +482,6 @@
     </div>
 </div>
 
-<!-- ════ VIEW: CORE ════ -->
 <div class="view active" id="v-train">
     <button class="rep-btn" onclick="addRep()" id="rep-btn">
         EXECUTE REP +1
@@ -497,13 +489,11 @@
     </button>
     <div class="rep-feedback" id="rep-feedback"></div>
 
-    <!-- Статистика -->
     <div class="stats-grid" style="margin-bottom:10px">
         <div class="stat-box"><div class="stat-val" id="s-reps">0</div><div class="stat-lbl">Повторений</div></div>
         <div class="stat-box"><div class="stat-val" id="s-kcal">0.0</div><div class="stat-lbl">Ккал</div></div>
     </div>
 
-    <!-- ADMIN PANEL (скрыт по умолчанию) -->
     <div id="admin-panel" class="admin-box" style="display:none;">
         <div class="admin-title">⚠ ADMIN PANEL</div>
         <input class="admin-input" id="adm-target" placeholder="TARGET USERNAME">
@@ -518,7 +508,6 @@
     <button class="logout-btn" onclick="logout()">⚠ ВЫЙТИ ИЗ СИСТЕМЫ</button>
 </div>
 
-<!-- ════ VIEW: FATE (Spin) ════ -->
 <div class="view" id="v-fate">
     <div class="spin-section">
         <div class="spin-wheel" id="spin-wheel"></div>
@@ -535,7 +524,6 @@
     </div>
 </div>
 
-<!-- NAV -->
 <nav>
     <div class="nav-item active" onclick="switchV('train', this)">
         <div class="nav-icon">💪</div>
@@ -588,9 +576,10 @@ async function handleAuth() {
     const p = document.getElementById('pass-in').value;
     const errEl = document.getElementById('auth-error');
     errEl.textContent = '';
+    errEl.style.color = 'var(--red)'; // По умолчанию красный для ошибок сети
 
-    if (!u) { errEl.textContent = 'Введи логин'; return; }
-    if (!p) { errEl.textContent = 'Введи пароль'; return; }
+    if (!u) { errEl.textContent = 'Введи идентификатор'; return; }
+    if (!p) { errEl.textContent = 'Введи ключ доступа'; return; }
 
     document.getElementById('auth-btn-el').textContent = 'CONNECTING...';
     document.getElementById('auth-btn-el').disabled = true;
@@ -604,8 +593,20 @@ async function handleAuth() {
         const r = await res.json();
 
         if (!res.ok) {
-            errEl.textContent = r.detail || 'Ошибка авторизации';
+            // ИСПРАВЛЕНИЕ ОШИБКИ [object Object]
+            errEl.textContent = r.detail || 'Отказано в доступе';
             return;
+        }
+
+        // ИСПРАВЛЕНИЕ: Читаем русские сообщения успеха от сервера
+        if (r.status === 'success') {
+            if (r.message === 'User created') {
+                 errEl.style.color = 'var(--gold)'; // Золотой для успеха
+                 errEl.textContent = 'Агент создан. Входим...';
+            } else {
+                 errEl.style.color = 'var(--accent)'; // Неоновый для входа
+                 errEl.textContent = 'Доступ разрешен. Синхронизация...';
+            }
         }
 
         state.username = u;
@@ -615,11 +616,14 @@ async function handleAuth() {
             state.is_admin = r.data.is_admin === 1;
         }
 
+        // Небольшая задержка, чтобы юзер успел прочитать сообщение успеха
+        await new Promise(f => setTimeout(f, 800));
+
         saveAuth();
         document.getElementById('auth-overlay').style.display = 'none';
         if (state.is_admin) document.getElementById('admin-panel').style.display = 'block';
         updateUI();
-        showToast(r.status === 'created' ? '⚡ Добро пожаловать, агент!' : '✅ Авторизация успешна', 'gold');
+        showToast(r.message === 'User created' ? '⚡ Агент Rus1777, добро пожаловать в Орден!' : '✅ Синхронизация завершена', 'gold');
         sync();
 
     } catch (e) {
@@ -631,11 +635,15 @@ async function handleAuth() {
             updateUI();
             setOffline(true);
         } else {
-            errEl.textContent = 'Нет соединения с сервером';
+            errEl.style.color = 'var(--red)';
+            errEl.textContent = 'Протокол прерван: нет связи с сервером';
         }
     } finally {
-        document.getElementById('auth-btn-el').textContent = isRegMode ? 'CREATE AGENT' : 'ENTER SYSTEM';
-        document.getElementById('auth-btn-el').disabled = false;
+        // Проверяем, активен ли оверлей, прежде чем менять текст кнопки
+        if(document.getElementById('auth-overlay').style.display !== 'none') {
+            document.getElementById('auth-btn-el').textContent = isRegMode ? 'CREATE AGENT' : 'ENTER SYSTEM';
+            document.getElementById('auth-btn-el').disabled = false;
+        }
     }
 }
 
@@ -651,11 +659,14 @@ function saveAuth() {
 }
 
 function logout() {
-    if (!confirm('Выйти из системы?')) return;
+    if (!confirm('Прервать сессию и выйти из системы?')) return;
     localStorage.removeItem('ae_auth');
     state = { username:'', token:'', xp:0, lvl:1, reps:0, kcal:0.0, balance:0.0, is_admin:false };
     document.getElementById('auth-overlay').style.display = 'flex';
     document.getElementById('admin-panel').style.display = 'none';
+    document.getElementById('user-in').value = '';
+    document.getElementById('pass-in').value = '';
+    document.getElementById('auth-error').textContent = '';
     updateUI();
 }
 
@@ -720,7 +731,7 @@ function addRep() {
     if (state.xp >= state.lvl * 150) {
         state.lvl++;
         state.xp = 0;
-        showToast('🎉 RANK UP! Уровень ' + state.lvl, 'gold');
+        showToast('🎉 RANK UP! Уровень доступа ' + state.lvl, 'gold');
     }
 
     updateUI();
@@ -768,10 +779,12 @@ async function spinWheel() {
             headers: { 'Authorization': 'Bearer ' + state.token },
         });
         if (res.status === 401) { logout(); return; }
-        const r = await res.json();
+        const r = await res.statusOk ? await res.json() : {status: 'error'}; // Упрощенная проверка
 
         if (r.status === 'low_balance') {
             showToast('Недостаточно $AE на сервере', 'err');
+        } else if (r.status === 'error') {
+             showToast('Ошибка протокола Спин', 'err');
         } else {
             // Применяем данные с сервера (истина — там)
             if (r.balance !== undefined) state.balance = r.balance;
@@ -842,8 +855,9 @@ function updateUI() {
 
 function updateMinted(val) {
     const n = Math.floor(val || 0);
+    const pct = Math.min((n / 50000000) * 100, 100); // 50M limit
     document.getElementById('minted-total').textContent = n.toLocaleString('ru-RU');
-    document.getElementById('minted-fill').style.width  = Math.min(n / 500000, 100) + '%';
+    document.getElementById('minted-fill').style.width  = pct + '%';
 }
 
 function setOffline(isOff) {
