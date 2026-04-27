@@ -2,7 +2,6 @@ import sqlite3
 import bcrypt
 import uuid
 import os
-from datetime import datetime
 from fastapi import FastAPI, Form, HTTPException
 from fastapi.responses import FileResponse
 import uvicorn
@@ -12,7 +11,7 @@ app = FastAPI()
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
-    conn.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT UNIQUE, password_hash TEXT, balance REAL DEFAULT 0, xp INTEGER DEFAULT 0, lvl INTEGER DEFAULT 1, reps INTEGER DEFAULT 0, kcal REAL DEFAULT 0.0)")
+    conn.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT UNIQUE, password_hash TEXT, balance REAL DEFAULT 0, xp INTEGER DEFAULT 0, lvl INTEGER DEFAULT 1, reps INTEGER DEFAULT 0, kcal REAL DEFAULT 0.0, is_admin INTEGER DEFAULT 0)")
     conn.execute("CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, user_id INTEGER)")
     conn.commit()
     conn.close()
