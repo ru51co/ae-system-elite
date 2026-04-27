@@ -75,7 +75,8 @@ class SyncData(BaseModel):
 @app.get("/", response_class=FileResponse)
 async def read_root():
     # Просто отдаем файл из корня репозитория
-    return FileResponse("index_final.html")
+    return return FileResponse(os.path.join(os.path.dirname(__file__), "index_final.html"))
+    
 
 @app.post("/api/register")
 async def register(username: str = Form(...), password: str = Form(...)):
