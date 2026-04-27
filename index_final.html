@@ -6,14 +6,17 @@
     <title>AE SYSTEM | ELITE ORDER</title>
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #050508; --bg2: #0a0a14; --accent: #00ccff; --glow: rgba(0,204,255,.4); --border: rgba(0,204,255,.15); --muted: #4a5568; }
-        body { background: var(--bg); color: #fff; font-family: 'Syne', sans-serif; min-height: 100dvh; display: flex; align-items: center; justify-content: center; margin: 0; }
-        .auth-card { width: 100%; max-width: 340px; background: var(--bg2); border: 1px solid var(--border); border-radius: 20px; padding: 30px; text-align: center; box-shadow: 0 0 40px rgba(0,204,255,.08); }
-        .auth-logo-img { max-width: 150px; margin-bottom: 20px; filter: drop-shadow(0 0 10px var(--glow)); }
+        :root { --bg: #050508; --bg2: #0a0a14; --accent: #00ccff; --glow: rgba(0,204,255,.4); --border: rgba(0,204,255,.15); }
+        body { background: var(--bg); color: #fff; font-family: 'Syne', sans-serif; margin: 0; overflow-x: hidden; }
+        #auth-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+        .auth-card { width: 90%; max-width: 340px; background: var(--bg2); border: 1px solid var(--border); border-radius: 20px; padding: 30px; text-align: center; }
+        .auth-logo-img { max-width: 140px; margin-bottom: 20px; filter: drop-shadow(0 0 10px var(--glow)); }
         .auth-input { width: 100%; padding: 12px; margin-bottom: 10px; background: #111120; border: 1px solid var(--border); color: #fff; border-radius: 10px; outline: none; }
-        .auth-btn { width: 100%; padding: 14px; background: var(--accent); border: none; border-radius: 11px; font-weight: 800; cursor: pointer; text-transform: uppercase; }
-        .auth-error { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--accent); margin-top: 15px; min-height: 1.2em; }
-        .auth-toggle { font-size: 10px; color: var(--muted); margin-top: 15px; cursor: pointer; }
+        .auth-btn { width: 100%; padding: 14px; background: var(--accent); border: none; border-radius: 11px; font-weight: 800; cursor: pointer; }
+        .auth-error { font-size: 11px; color: var(--accent); margin-top: 15px; font-family: 'Space Mono', monospace; }
+        /* Основной интерфейс (скрыт пока нет входа) */
+        .main-content { padding: 20px; text-align: center; }
+        .stat-val { font-size: 32px; color: var(--accent); }
     </style>
 </head>
 <body>
@@ -21,50 +24,57 @@
 <div id="auth-overlay">
     <div class="auth-card">
         <img src="https://i.ibb.co/VYvXf7V/assassin-energy-logo.png" alt="AE LOGO" class="auth-logo-img">
-        <div style="letter-spacing: 2px; color: var(--accent); margin-bottom: 20px; font-size: 14px;">AE_SYSTEM.INIT</div>
-        
+        <div style="color:var(--accent); margin-bottom:20px; letter-spacing:2px;">AE_SYSTEM.INIT</div>
         <input class="auth-input" id="user-in" placeholder="IDENTIFIER">
         <input class="auth-input" id="pass-in" type="password" placeholder="PASSKEY">
         <button class="auth-btn" onclick="handleAuth()" id="auth-btn-el">ENTER SYSTEM</button>
-        
         <div class="auth-error" id="auth-error"></div>
-        <div class="auth-toggle" id="auth-toggle-el" onclick="toggleMode()">Новый агент? Регистрация →</div>
+        <div style="font-size:10px; color:#4a5568; margin-top:15px; cursor:pointer;" onclick="isReg=!isReg; document.getElementById('auth-btn-el').innerText=isReg?'CREATE AGENT':'ENTER SYSTEM'">Сменить режим (Вход/Регистрация)</div>
     </div>
+</div>
+
+<div class="main-content">
+    <h1 id="welcome-msg">WELCOME, AGENT</h1>
+    <div class="stat-val" id="bal-val">0.0</div>
+    <div style="font-size:12px; color:#4a5568;">$AE BALANCE</div>
 </div>
 
 <script>
     let isReg = false;
-    function toggleMode() {
-        isReg = !isReg;
-        document.getElementById('auth-btn-el').innerText = isReg ? 'CREATE AGENT' : 'ENTER SYSTEM';
-        document.getElementById('auth-toggle-el').innerText = isReg ? 'Уже есть аккаунт? Войти →' : 'Новый агент? Регистрация →';
-    }
-
     async function handleAuth() {
         const u = document.getElementById('user-in').value;
         const p = document.getElementById('pass-in').value;
         const msg = document.getElementById('auth-error');
         const url = isReg ? '/api/register' : '/api/login';
         
-        const formData = new FormData();
-        formData.append('username', u);
-        formData.append('password', p);
+        const fd = new FormData();
+        fd.append('username', u); fd.append('password', p);
 
         try {
-            const r = await fetch(url, { method: 'POST', body: formData });
+            const r = await fetch(url, { method: 'POST', body: fd });
             const data = await r.json();
 
             if (r.ok) {
-                // ИСПРАВЛЕНИЕ: Берем текст из ключа message или status
-                msg.innerText = isReg ? "Агент успешно создан!" : "Доступ разрешен. Вход...";
-                if (!isReg && data.token) {
-                    setTimeout(() => { location.reload(); }, 1000);
+                if (isReg) {
+                    msg.innerText = "Агент создан! Теперь войдите.";
+                    isReg = false;
+                    document.getElementById('auth-btn-el').innerText = 'ENTER SYSTEM';
+                } else {
+                    // ЕСЛИ ВХОД УСПЕШЕН:
+                    msg.innerText = "Доступ разрешен...";
+                    document.getElementById('bal-val').innerText = data.balance;
+                    document.getElementById('welcome-msg').innerText = "WELCOME, " + data.username;
+                    
+                    // ГЛАВНЫЙ МОМЕНТ — ПРЯЧЕМ ЭКРАН ВХОДА
+                    setTimeout(() => {
+                        document.getElementById('auth-overlay').style.display = 'none';
+                    }, 800);
                 }
             } else {
-                msg.innerText = data.detail || "Ошибка протокола";
+                msg.innerText = data.detail || "Ошибка доступа";
             }
         } catch (e) {
-            msg.innerText = "Связь прервана";
+            msg.innerText = "Ошибка связи с сервером";
         }
     }
 </script>
