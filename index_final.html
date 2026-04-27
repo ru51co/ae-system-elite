@@ -7,16 +7,20 @@
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #050508; --bg2: #0a0a14; --accent: #00ccff; --glow: rgba(0,204,255,.4); --border: rgba(0,204,255,.15); }
-        body { background: var(--bg); color: #fff; font-family: 'Syne', sans-serif; margin: 0; overflow-x: hidden; }
+        body { background: var(--bg); color: #fff; font-family: 'Syne', sans-serif; margin: 0; display: flex; flex-direction: column; min-height: 100vh; }
+        
+        /* ЭКРАН ВХОДА */
         #auth-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; align-items: center; justify-content: center; }
         .auth-card { width: 90%; max-width: 340px; background: var(--bg2); border: 1px solid var(--border); border-radius: 20px; padding: 30px; text-align: center; }
         .auth-logo-img { max-width: 140px; margin-bottom: 20px; filter: drop-shadow(0 0 10px var(--glow)); }
         .auth-input { width: 100%; padding: 12px; margin-bottom: 10px; background: #111120; border: 1px solid var(--border); color: #fff; border-radius: 10px; outline: none; }
-        .auth-btn { width: 100%; padding: 14px; background: var(--accent); border: none; border-radius: 11px; font-weight: 800; cursor: pointer; }
-        .auth-error { font-size: 11px; color: var(--accent); margin-top: 15px; font-family: 'Space Mono', monospace; }
-        /* Основной интерфейс (скрыт пока нет входа) */
-        .main-content { padding: 20px; text-align: center; }
-        .stat-val { font-size: 32px; color: var(--accent); }
+        .auth-btn { width: 100%; padding: 14px; background: var(--accent); border: none; border-radius: 11px; font-weight: 800; cursor: pointer; text-transform: uppercase; }
+        .auth-error { font-size: 11px; color: var(--accent); margin-top: 15px; min-height: 1.2em; font-family: 'Space Mono', monospace; }
+        
+        /* ИНТЕРФЕЙС ПОСЛЕ ВХОДА */
+        .main-ui { display: none; padding: 20px; text-align: center; width: 100%; }
+        .stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 15px; padding: 20px; margin-top: 20px; }
+        .bal-val { font-size: 32px; color: var(--accent); font-weight: 800; }
     </style>
 </head>
 <body>
@@ -24,23 +28,32 @@
 <div id="auth-overlay">
     <div class="auth-card">
         <img src="https://i.ibb.co/VYvXf7V/assassin-energy-logo.png" alt="AE LOGO" class="auth-logo-img">
-        <div style="color:var(--accent); margin-bottom:20px; letter-spacing:2px;">AE_SYSTEM.INIT</div>
+        <div style="color:var(--accent); margin-bottom:20px; letter-spacing:2px; font-size:12px;">AE_SYSTEM.INIT</div>
         <input class="auth-input" id="user-in" placeholder="IDENTIFIER">
         <input class="auth-input" id="pass-in" type="password" placeholder="PASSKEY">
         <button class="auth-btn" onclick="handleAuth()" id="auth-btn-el">ENTER SYSTEM</button>
         <div class="auth-error" id="auth-error"></div>
-        <div style="font-size:10px; color:#4a5568; margin-top:15px; cursor:pointer;" onclick="isReg=!isReg; document.getElementById('auth-btn-el').innerText=isReg?'CREATE AGENT':'ENTER SYSTEM'">Сменить режим (Вход/Регистрация)</div>
+        <div style="font-size:10px; color:#4a5568; margin-top:15px; cursor:pointer;" onclick="toggleMode()" id="mode-toggle">Новый агент? Регистрация →</div>
     </div>
 </div>
 
-<div class="main-content">
-    <h1 id="welcome-msg">WELCOME, AGENT</h1>
-    <div class="stat-val" id="bal-val">0.0</div>
-    <div style="font-size:12px; color:#4a5568;">$AE BALANCE</div>
+<div class="main-ui" id="main-ui">
+    <h2 id="welcome-txt">WELCOME, AGENT</h2>
+    <div class="stat-card">
+        <div class="bal-val" id="bal-txt">0.0</div>
+        <div style="font-size:11px; color:#4a5568; letter-spacing:2px;">$AE BALANCE</div>
+    </div>
+    <button class="auth-btn" style="margin-top:20px; background:#ff3333;" onclick="location.reload()">LOGOUT</button>
 </div>
 
 <script>
     let isReg = false;
+    function toggleMode() {
+        isReg = !isReg;
+        document.getElementById('auth-btn-el').innerText = isReg ? 'CREATE AGENT' : 'ENTER SYSTEM';
+        document.getElementById('mode-toggle').innerText = isReg ? 'Уже есть аккаунт? Войти →' : 'Новый агент? Регистрация →';
+    }
+
     async function handleAuth() {
         const u = document.getElementById('user-in').value;
         const p = document.getElementById('pass-in').value;
@@ -56,25 +69,25 @@
 
             if (r.ok) {
                 if (isReg) {
-                    msg.innerText = "Агент создан! Теперь войдите.";
-                    isReg = false;
-                    document.getElementById('auth-btn-el').innerText = 'ENTER SYSTEM';
+                    msg.innerText = "Агент создан! Переключаюсь на вход...";
+                    setTimeout(toggleMode, 1000);
                 } else {
-                    // ЕСЛИ ВХОД УСПЕШЕН:
-                    msg.innerText = "Доступ разрешен...";
-                    document.getElementById('bal-val').innerText = data.balance;
-                    document.getElementById('welcome-msg').innerText = "WELCOME, " + data.username;
+                    msg.innerText = "Доступ разрешен. Синхронизация...";
+                    // ЗАПОЛНЯЕМ ДАННЫЕ
+                    document.getElementById('welcome-txt').innerText = "WELCOME, " + data.username;
+                    document.getElementById('bal-txt').innerText = data.balance.toFixed(1);
                     
-                    // ГЛАВНЫЙ МОМЕНТ — ПРЯЧЕМ ЭКРАН ВХОДА
+                    // ПРЯЧЕМ ВХОД И ПОКАЗЫВАЕМ ИНТЕРФЕЙС
                     setTimeout(() => {
                         document.getElementById('auth-overlay').style.display = 'none';
+                        document.getElementById('main-ui').style.display = 'block';
                     }, 800);
                 }
             } else {
                 msg.innerText = data.detail || "Ошибка доступа";
             }
         } catch (e) {
-            msg.innerText = "Ошибка связи с сервером";
+            msg.innerText = "Нет связи с сервером";
         }
     }
 </script>
