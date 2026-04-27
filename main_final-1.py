@@ -8,12 +8,9 @@ import os
 
 app = FastAPI()
 
-# Создаем папку для статики, если её нет
-if not os.path.exists("static"):
-    os.makedirs("static")
-
-# Подключаем шаблоны (путь к папке со фронтендом)
-templates = Jinja2Templates(directory="static")
+# ИСПРАВЛЕНИЕ: Теперь сервер ищет index.html в корне (directory=".")
+# Если решишь использовать папку static, просто поменяй "." на "static"
+templates = Jinja2Templates(directory=".")
 
 TOTAL_SUPPLY_LIMIT = 50000000.0
 REWARD_PER_REP = 0.1
@@ -24,7 +21,6 @@ def init_db():
             (username TEXT PRIMARY KEY, password TEXT, xp INTEGER DEFAULT 0, 
              lvl INTEGER DEFAULT 1, reps INTEGER DEFAULT 0, kcal REAL DEFAULT 0.0,
              balance REAL DEFAULT 0.0, is_premium INTEGER DEFAULT 0)''')
-        # Таблица для розеток (карты)
         conn.execute('''CREATE TABLE IF NOT EXISTS sockets 
             (id INTEGER PRIMARY KEY AUTOINCREMENT, lat REAL, lon REAL, desc TEXT)''')
 init_db()
@@ -58,14 +54,4 @@ async def sync(data: SyncData):
     return {"status": "synced"}
 
 @app.get("/api/weather")
-async def weather(lat: float, lon: float):
-    # Заглушка (для реальных данных нужен API ключ OpenWeather)
-    return {"temp": 24, "condition": "Clear"}
-
-@app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+async def
