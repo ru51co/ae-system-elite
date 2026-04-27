@@ -3,97 +3,118 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>AE SYSTEM | TACTICAL HUD</title>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@800&display=swap" rel="stylesheet">
+  <title>AE SYSTEM | TACTICAL MAP</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <style>
-    :root { --accent: #00ccff; --danger: #ff3cac; --bg: #050508; }
-    body { background: var(--bg); color: #fff; font-family: 'Space Mono', monospace; overflow: hidden; }
-    #map { height: 100vh; width: 100vw; position: absolute; z-index: 0; filter: contrast(1.2) brightness(0.5) grayscale(0.8); }
-    .hud-element { background: rgba(10, 10, 20, 0.7); border: 1px solid rgba(0, 204, 255, 0.2); backdrop-filter: blur(10px); }
-    .scan-glow { box-shadow: 0 0 20px rgba(0, 204, 255, 0.3); }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-    .animate-scanning { animation: pulse 1.5s infinite; }
+    :root { --neon: #00ccff; --bg: #050508; }
+    body { background: var(--bg); color: #fff; font-family: 'Space Mono', monospace; margin: 0; overflow: hidden; }
+    #map { height: 100vh; width: 100vw; position: absolute; z-index: 0; filter: contrast(1.2) brightness(0.6) grayscale(0.7) invert(0.05); }
+    .hud-panel { background: rgba(5, 10, 15, 0.8); border: 1px solid rgba(0, 204, 255, 0.2); backdrop-filter: blur(10px); pointer-events: auto; }
+    .neon-text { color: var(--neon); text-shadow: 0 0 10px rgba(0, 204, 255, 0.5); }
+    .leaflet-popup-content-wrapper { background: #0a0a14; color: #fff; border: 1px solid var(--neon); font-family: 'Space Mono'; }
+    .leaflet-popup-tip { background: var(--neon); }
+    /* Сетка поверх карты */
+    .map-grid { position: absolute; inset: 0; pointer-events: none; z-index: 5; background-image: linear-gradient(rgba(0, 204, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 204, 255, 0.05) 1px, transparent 1px); background-size: 50px 50px; }
   </style>
 </head>
 <body>
 
 <div id="map"></div>
+<div class="map-grid"></div>
 
 <div class="absolute top-0 left-0 w-full z-10 p-4 flex justify-between items-start pointer-events-none">
-  <div class="hud-element p-3 rounded-xl pointer-events-auto border-l-4 border-l-cyan-500">
-    <div class="text-[10px] text-cyan-500 font-bold uppercase tracking-widest">Environment</div>
-    <div class="flex gap-4 mt-1">
-      <div><span class="text-gray-500 text-[9px]">ALT:</span> <span id="alt">0</span>m</div>
-      <div><span class="text-gray-500 text-[9px]">TMP:</span> <span id="temp">+24°</span></div>
-    </div>
+  <div class="hud-panel p-3 rounded-lg border-l-4 border-l-cyan-500">
+    <div class="text-[9px] text-cyan-600 uppercase font-bold tracking-widest leading-none">Global Positioning</div>
+    <div class="text-sm font-bold neon-text" id="coords">WAITING GPS...</div>
   </div>
-  
-  <div class="hud-element p-3 rounded-xl pointer-events-auto text-right border-r-4 border-r-cyan-500">
-    <div id="agent-name" class="text-xs font-bold text-white uppercase">UNAUTHORIZED</div>
-    <div class="text-[10px] text-cyan-500"><span id="agent-lvl">LVL 1</span> | <span id="agent-xp">0</span> XP</div>
+  <div class="hud-panel p-3 rounded-lg text-right border-r-4 border-r-cyan-500">
+    <div class="text-xs font-bold uppercase" id="user-display">AGENT: BRATAN</div>
+    <div class="text-[9px] text-cyan-600">SYSTEM STATUS: NOMINAL</div>
   </div>
 </div>
 
-<div class="absolute top-24 left-4 z-10 space-y-3 pointer-events-none">
-  <div class="hud-element p-3 rounded-xl pointer-events-auto w-32 border-l-2 border-cyan-500/30">
-    <div class="text-[8px] text-cyan-600 uppercase">Steps</div>
-    <div class="text-lg font-bold" id="steps-val">1,402</div>
+<div class="absolute top-24 left-4 z-10 space-y-2 pointer-events-none">
+  <div class="hud-panel p-2 rounded-md w-24 border-l border-cyan-500/30">
+    <div class="text-[8px] text-cyan-700 uppercase">Pulse</div>
+    <div class="text-xs font-bold" id="pulse">72 <small>BPM</small></div>
   </div>
-  <div class="hud-element p-3 rounded-xl pointer-events-auto w-32 border-l-2 border-red-500/30">
-    <div class="text-[8px] text-red-500 uppercase animate-pulse">Heart Rate</div>
-    <div class="text-lg font-bold text-red-400"><span id="pulse-val">72</span> <small class="text-[10px]">BPM</small></div>
-  </div>
-  <div class="hud-element p-3 rounded-xl pointer-events-auto w-32 border-l-2 border-blue-500/30">
-    <div class="text-[8px] text-blue-500 uppercase">Hydration</div>
-    <div class="text-lg font-bold text-blue-300">850 <small class="text-[10px]">ML</small></div>
+  <div class="hud-panel p-2 rounded-md w-24 border-l border-cyan-500/30 text-yellow-500">
+    <div class="text-[8px] uppercase opacity-60">Kcal</div>
+    <div class="text-xs font-bold" id="kcal-display">450</div>
   </div>
 </div>
 
-<div class="absolute bottom-10 left-0 w-full z-10 flex justify-center items-center pointer-events-none">
+<div class="absolute bottom-8 left-0 w-full z-10 flex justify-center items-center pointer-events-none px-6">
   <div class="flex gap-4 items-center">
-    <button onclick="map.locate({setView:true})" class="hud-element p-4 rounded-full pointer-events-auto active:scale-90 transition-all">📍</button>
+    <button onclick="map.locate({setView: true})" class="hud-panel p-4 rounded-full active:scale-90 transition-all border-cyan-500/50">📍</button>
     
-    <button onclick="startScanner()" class="hud-element w-24 h-24 rounded-full pointer-events-auto scan-glow flex flex-col items-center justify-center border-2 border-cyan-400 relative overflow-hidden group">
-      <div class="absolute inset-0 bg-cyan-500/10 group-active:bg-cyan-500/30 transition-all"></div>
-      <span class="text-3xl mb-1">📸</span>
-      <span class="text-[9px] font-bold text-cyan-400 uppercase tracking-tighter">Bio-Scanner</span>
-    </button>
-    
-    <button onclick="toggleLeaderboard()" class="hud-element p-4 rounded-full pointer-events-auto active:scale-90 transition-all">🏆</button>
+    <div class="hud-panel px-6 py-3 rounded-2xl flex flex-col items-center border-t-2 border-cyan-400">
+      <div class="text-[8px] text-cyan-500 uppercase font-bold mb-1">Add Node</div>
+      <div class="text-[10px] text-gray-400">TAP ON MAP</div>
+    </div>
+
+    <button onclick="alert('SCANNER ACTIVE: Point at food')" class="hud-panel p-4 rounded-full active:scale-90 transition-all border-yellow-500/50">📸</button>
   </div>
 </div>
 
 <script>
-  // --- Initialization ---
+  // --- Карта ---
   const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([55.75, 37.61], 13);
+  
+  // Темный слой "CartoDB Dark Matter" идеально подходит под стиль
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-  // --- Real-time Bio Simulation ---
-  function updateBio() {
-    document.getElementById('pulse-val').innerText = 70 + Math.floor(Math.random() * 10);
-    // Высота через GPS
-    navigator.geolocation.getCurrentPosition(p => {
-        document.getElementById('alt').innerText = Math.round(p.coords.altitude || 0);
+  // Кастомная иконка узла
+  const nodeIcon = L.divIcon({
+    className: 'custom-div-icon',
+    html: "<div style='background-color:#00ccff; width:12px; height:12px; border-radius:50%; box-shadow:0 0 10px #00ccff; border:2px solid #fff;'></div>",
+    iconSize: [12, 12],
+    iconAnchor: [6, 6]
+  });
+
+  // Массив для хранения узлов (в идеале нужно слать на твой /api/workout или создать новый эндпоинт)
+  let nodes = JSON.parse(localStorage.getItem('ae_nodes') || '[]');
+
+  function renderNodes() {
+    nodes.forEach(node => {
+      L.marker(node.coords, {icon: nodeIcon}).addTo(map)
+        .bindPopup(`<b>УЗЕЛ: ${node.name}</b><br><small>STATUS: SECURE</small>`);
     });
   }
-  setInterval(updateBio, 3000);
+  renderNodes();
 
-  // --- Scanner Logic ---
-  function startScanner() {
-    const btn = event.currentTarget;
-    btn.classList.add('animate-scanning');
-    alert("Инициализация камеры... Анализ калорий и БЖУ");
-    setTimeout(() => btn.classList.remove('animate-scanning'), 3000);
-  }
+  // Добавление узла по клику
+  map.on('click', function(e) {
+    const nodeName = prompt("Введите название узла (напр. Точка сбора):");
+    if (nodeName) {
+      const newNode = {
+        name: nodeName,
+        coords: [e.latlng.lat, e.latlng.lng],
+        time: new Date().toISOString()
+      };
+      nodes.push(newNode);
+      localStorage.setItem('ae_nodes', JSON.stringify(nodes));
+      
+      L.marker(newNode.coords, {icon: nodeIcon}).addTo(map)
+        .bindPopup(`<b>УЗЕЛ: ${newNode.name}</b><br><small>CREATED: JUST NOW</small>`)
+        .openPopup();
+    }
+  });
 
-  // --- Map Interaction ---
+  // GPS мониторинг
   map.locate({setView: true, watch: true});
   map.on('locationfound', e => {
-    L.circle(e.latlng, {radius: 15, color: '#00ccff', fillOpacity: 0.3}).addTo(map);
+    document.getElementById('coords').innerText = `${e.latlng.lat.toFixed(4)} N, ${e.latlng.lng.toFixed(4)} E`;
+    L.circle(e.latlng, {radius: 20, color: '#00ccff', weight: 1, fillOpacity: 0.1}).addTo(map);
   });
+
+  // Симуляция пульса
+  setInterval(() => {
+    document.getElementById('pulse').innerHTML = `${70 + Math.floor(Math.random() * 8)} <small>BPM</small>`;
+  }, 3000);
 </script>
 
 </body>
