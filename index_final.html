@@ -1,95 +1,100 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AE SYSTEM | ELITE ORDER</title>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
-    <style>
-        :root { --bg: #050508; --bg2: #0a0a14; --accent: #00ccff; --glow: rgba(0,204,255,.4); --border: rgba(0,204,255,.15); }
-        body { background: var(--bg); color: #fff; font-family: 'Syne', sans-serif; margin: 0; display: flex; flex-direction: column; min-height: 100vh; }
-        
-        /* ЭКРАН ВХОДА */
-        #auth-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; align-items: center; justify-content: center; }
-        .auth-card { width: 90%; max-width: 340px; background: var(--bg2); border: 1px solid var(--border); border-radius: 20px; padding: 30px; text-align: center; }
-        .auth-logo-img { max-width: 140px; margin-bottom: 20px; filter: drop-shadow(0 0 10px var(--glow)); }
-        .auth-input { width: 100%; padding: 12px; margin-bottom: 10px; background: #111120; border: 1px solid var(--border); color: #fff; border-radius: 10px; outline: none; }
-        .auth-btn { width: 100%; padding: 14px; background: var(--accent); border: none; border-radius: 11px; font-weight: 800; cursor: pointer; text-transform: uppercase; }
-        .auth-error { font-size: 11px; color: var(--accent); margin-top: 15px; min-height: 1.2em; font-family: 'Space Mono', monospace; }
-        
-        /* ИНТЕРФЕЙС ПОСЛЕ ВХОДА */
-        .main-ui { display: none; padding: 20px; text-align: center; width: 100%; }
-        .stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 15px; padding: 20px; margin-top: 20px; }
-        .bal-val { font-size: 32px; color: var(--accent); font-weight: 800; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AE SYSTEM | TACTICAL HUD</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    :root { --accent: #00ccff; --danger: #ff3cac; --bg: #050508; }
+    body { background: var(--bg); color: #fff; font-family: 'Space Mono', monospace; overflow: hidden; }
+    #map { height: 100vh; width: 100vw; position: absolute; z-index: 0; filter: contrast(1.2) brightness(0.5) grayscale(0.8); }
+    .hud-element { background: rgba(10, 10, 20, 0.7); border: 1px solid rgba(0, 204, 255, 0.2); backdrop-filter: blur(10px); }
+    .scan-glow { box-shadow: 0 0 20px rgba(0, 204, 255, 0.3); }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .animate-scanning { animation: pulse 1.5s infinite; }
+  </style>
 </head>
 <body>
 
-<div id="auth-overlay">
-    <div class="auth-card">
-        <img src="https://i.ibb.co/VYvXf7V/assassin-energy-logo.png" alt="AE LOGO" class="auth-logo-img">
-        <div style="color:var(--accent); margin-bottom:20px; letter-spacing:2px; font-size:12px;">AE_SYSTEM.INIT</div>
-        <input class="auth-input" id="user-in" placeholder="IDENTIFIER">
-        <input class="auth-input" id="pass-in" type="password" placeholder="PASSKEY">
-        <button class="auth-btn" onclick="handleAuth()" id="auth-btn-el">ENTER SYSTEM</button>
-        <div class="auth-error" id="auth-error"></div>
-        <div style="font-size:10px; color:#4a5568; margin-top:15px; cursor:pointer;" onclick="toggleMode()" id="mode-toggle">Новый агент? Регистрация →</div>
+<div id="map"></div>
+
+<div class="absolute top-0 left-0 w-full z-10 p-4 flex justify-between items-start pointer-events-none">
+  <div class="hud-element p-3 rounded-xl pointer-events-auto border-l-4 border-l-cyan-500">
+    <div class="text-[10px] text-cyan-500 font-bold uppercase tracking-widest">Environment</div>
+    <div class="flex gap-4 mt-1">
+      <div><span class="text-gray-500 text-[9px]">ALT:</span> <span id="alt">0</span>m</div>
+      <div><span class="text-gray-500 text-[9px]">TMP:</span> <span id="temp">+24°</span></div>
     </div>
+  </div>
+  
+  <div class="hud-element p-3 rounded-xl pointer-events-auto text-right border-r-4 border-r-cyan-500">
+    <div id="agent-name" class="text-xs font-bold text-white uppercase">UNAUTHORIZED</div>
+    <div class="text-[10px] text-cyan-500"><span id="agent-lvl">LVL 1</span> | <span id="agent-xp">0</span> XP</div>
+  </div>
 </div>
 
-<div class="main-ui" id="main-ui">
-    <h2 id="welcome-txt">WELCOME, AGENT</h2>
-    <div class="stat-card">
-        <div class="bal-val" id="bal-txt">0.0</div>
-        <div style="font-size:11px; color:#4a5568; letter-spacing:2px;">$AE BALANCE</div>
-    </div>
-    <button class="auth-btn" style="margin-top:20px; background:#ff3333;" onclick="location.reload()">LOGOUT</button>
+<div class="absolute top-24 left-4 z-10 space-y-3 pointer-events-none">
+  <div class="hud-element p-3 rounded-xl pointer-events-auto w-32 border-l-2 border-cyan-500/30">
+    <div class="text-[8px] text-cyan-600 uppercase">Steps</div>
+    <div class="text-lg font-bold" id="steps-val">1,402</div>
+  </div>
+  <div class="hud-element p-3 rounded-xl pointer-events-auto w-32 border-l-2 border-red-500/30">
+    <div class="text-[8px] text-red-500 uppercase animate-pulse">Heart Rate</div>
+    <div class="text-lg font-bold text-red-400"><span id="pulse-val">72</span> <small class="text-[10px]">BPM</small></div>
+  </div>
+  <div class="hud-element p-3 rounded-xl pointer-events-auto w-32 border-l-2 border-blue-500/30">
+    <div class="text-[8px] text-blue-500 uppercase">Hydration</div>
+    <div class="text-lg font-bold text-blue-300">850 <small class="text-[10px]">ML</small></div>
+  </div>
+</div>
+
+<div class="absolute bottom-10 left-0 w-full z-10 flex justify-center items-center pointer-events-none">
+  <div class="flex gap-4 items-center">
+    <button onclick="map.locate({setView:true})" class="hud-element p-4 rounded-full pointer-events-auto active:scale-90 transition-all">📍</button>
+    
+    <button onclick="startScanner()" class="hud-element w-24 h-24 rounded-full pointer-events-auto scan-glow flex flex-col items-center justify-center border-2 border-cyan-400 relative overflow-hidden group">
+      <div class="absolute inset-0 bg-cyan-500/10 group-active:bg-cyan-500/30 transition-all"></div>
+      <span class="text-3xl mb-1">📸</span>
+      <span class="text-[9px] font-bold text-cyan-400 uppercase tracking-tighter">Bio-Scanner</span>
+    </button>
+    
+    <button onclick="toggleLeaderboard()" class="hud-element p-4 rounded-full pointer-events-auto active:scale-90 transition-all">🏆</button>
+  </div>
 </div>
 
 <script>
-    let isReg = false;
-    function toggleMode() {
-        isReg = !isReg;
-        document.getElementById('auth-btn-el').innerText = isReg ? 'CREATE AGENT' : 'ENTER SYSTEM';
-        document.getElementById('mode-toggle').innerText = isReg ? 'Уже есть аккаунт? Войти →' : 'Новый агент? Регистрация →';
-    }
+  // --- Initialization ---
+  const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([55.75, 37.61], 13);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-    async function handleAuth() {
-        const u = document.getElementById('user-in').value;
-        const p = document.getElementById('pass-in').value;
-        const msg = document.getElementById('auth-error');
-        const url = isReg ? '/api/register' : '/api/login';
-        
-        const fd = new FormData();
-        fd.append('username', u); fd.append('password', p);
+  // --- Real-time Bio Simulation ---
+  function updateBio() {
+    document.getElementById('pulse-val').innerText = 70 + Math.floor(Math.random() * 10);
+    // Высота через GPS
+    navigator.geolocation.getCurrentPosition(p => {
+        document.getElementById('alt').innerText = Math.round(p.coords.altitude || 0);
+    });
+  }
+  setInterval(updateBio, 3000);
 
-        try {
-            const r = await fetch(url, { method: 'POST', body: fd });
-            const data = await r.json();
+  // --- Scanner Logic ---
+  function startScanner() {
+    const btn = event.currentTarget;
+    btn.classList.add('animate-scanning');
+    alert("Инициализация камеры... Анализ калорий и БЖУ");
+    setTimeout(() => btn.classList.remove('animate-scanning'), 3000);
+  }
 
-            if (r.ok) {
-                if (isReg) {
-                    msg.innerText = "Агент создан! Переключаюсь на вход...";
-                    setTimeout(toggleMode, 1000);
-                } else {
-                    msg.innerText = "Доступ разрешен. Синхронизация...";
-                    // ЗАПОЛНЯЕМ ДАННЫЕ
-                    document.getElementById('welcome-txt').innerText = "WELCOME, " + data.username;
-                    document.getElementById('bal-txt').innerText = data.balance.toFixed(1);
-                    
-                    // ПРЯЧЕМ ВХОД И ПОКАЗЫВАЕМ ИНТЕРФЕЙС
-                    setTimeout(() => {
-                        document.getElementById('auth-overlay').style.display = 'none';
-                        document.getElementById('main-ui').style.display = 'block';
-                    }, 800);
-                }
-            } else {
-                msg.innerText = data.detail || "Ошибка доступа";
-            }
-        } catch (e) {
-            msg.innerText = "Нет связи с сервером";
-        }
-    }
+  // --- Map Interaction ---
+  map.locate({setView: true, watch: true});
+  map.on('locationfound', e => {
+    L.circle(e.latlng, {radius: 15, color: '#00ccff', fillOpacity: 0.3}).addTo(map);
+  });
 </script>
+
 </body>
 </html>
