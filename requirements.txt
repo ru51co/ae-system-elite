@@ -1,7 +1,4 @@
 fastapi
 uvicorn
 bcrypt
-jinja2
-pydantic
-aiofiles
 python-multipart
