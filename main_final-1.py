@@ -74,9 +74,9 @@ class SyncData(BaseModel):
 
 @app.get("/", response_class=FileResponse)
 async def read_root():
-    # Просто отдаем файл из корня репозитория
-    return return FileResponse(os.path.join(os.path.dirname(__file__), "index_final.html"))
-    
+    # Использование абсолютного пути, чтобы Render точно нашел файл
+    file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index_final.html")
+    return FileResponse(file_path)
 
 @app.post("/api/register")
 async def register(username: str = Form(...), password: str = Form(...)):
@@ -122,6 +122,7 @@ async def sync_balance(data: SyncData):
             "UPDATE users SET balance = balance + ? WHERE id = ?",
             (reward, session["user_id"])
         )
+        
         new_balance = conn.execute(
             "SELECT balance FROM users WHERE id = ?", (session["user_id"],)
         ).fetchone()["balance"]
@@ -144,4 +145,3 @@ async def get_profile(token: str):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
-  
